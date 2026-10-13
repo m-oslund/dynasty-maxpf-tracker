@@ -4,13 +4,13 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="AFL Standings and Draft Board",
+    page_title="AFL Standings & Draft Board",
     page_icon="🏈",
     layout="wide",
 )
 
 st.title("🏈 AFL Standings and Draft Board")
-st.markdown("Live standings dynamically refreshed every 30 seconds from the Sleeper API.")
+st.markdown("Live standings and draft order refreshed every 30 seconds from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
