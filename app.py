@@ -117,9 +117,9 @@ if league_id:
     if error:
         st.error(error)
     elif df is not None and not df.empty:
-        # 1. Record Only Table
-        st.subheader("🏆 League Standings (Record Only)")
-        st.caption("Ranked from first to last by W-L Record and Points For.")
+        # 1. Standings Table (Tightened in centered column)
+        st.subheader("🏆 League Standings")
+        st.caption("Live standings dynamically refreshed every 30 seconds from the Sleeper API")
 
         df_standings = (
             df.sort_values(by=["Wins", "Ties", "FPTS"], ascending=[False, False, False])
@@ -129,7 +129,10 @@ if league_id:
         df_standings.index += 1
         df_standings.index.name = "Rank"
 
-        st.table(df_standings[["Team", "Record"]])
+        # Tighten width by wrapping in columns
+        c_left, c_mid, c_right = st.columns([1, 2, 1])
+        with c_mid:
+            st.table(df_standings[["Team", "Record"]])
 
         st.markdown("---")
 
@@ -166,4 +169,4 @@ if league_id:
 
             st.table(df_total[["Team", "Total PF", "Record"]])
     else:
-        st.warning("No data found for this league ID.")
+        st.warning("No data found for
