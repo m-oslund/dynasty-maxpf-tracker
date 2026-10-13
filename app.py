@@ -78,10 +78,10 @@ def fetch_league_data(lid):
     data.append({
         "roster_id": rid,
         "Team": owner,
-        "Max PF Num": round(max_pf[rid], 2),
-        "Total PF Num": round(total_bench_pf[rid], 2),
-        "Max PF": f"{max_pf[rid]:.2f}",
-        "Total PF (Inc. Bench)": f"{total_bench_pf[rid]:.2f}",
+        "Max PF Float": round(max_pf[rid], 2),
+        "Total PF Float": round(total_bench_pf[rid], 2),
+        "Max PF": f"{max_pf[rid]:,.2f}",
+        "Total PF (Inc. Bench)": f"{total_bench_pf[rid]:,.2f}",
     })
 
   return pd.DataFrame(data), None
@@ -98,7 +98,7 @@ if league_id:
     st.caption("Lowest Max PF determines pick position.")
 
     df_draft = (
-        df.sort_values(by="Max PF Num", ascending=True)
+        df.sort_values(by="Max PF Float", ascending=True)
         .reset_index(drop=True)
         .copy()
     )
@@ -109,10 +109,39 @@ if league_id:
     st.dataframe(
         df_draft[["Team", "Max PF"]],
         use_container_width=True,
-        column_config={
-            "Team": st.column_config.TextColumn("Team", width="medium"),
-            "Max PF": st.column_config.TextColumn("Max PF", width="small"),
-        },
     )
 
     st.markdown("---")
+
+    # 2. Side-by-Side Standings Breakdown
+    col1, col2 = st.columns(2)
+
+    with col1:
+      st.subheader("📊 Ranked by Max PF")
+      df_max = (
+          df.sort_values(by="Max PF Float", ascending=False)
+          .reset_index(drop=True)
+          .copy()
+      )
+      df_max.index += 1
+      df_max.index.name = "Rank"
+      st.dataframe(
+          df_max[["Team", "Max PF"]],
+          use_container_width=True,
+      )
+
+    with col2:
+      st.subheader("📈 Ranked by Total PF (Inc. Bench)")
+      df_total = (
+          df.sort_values(by="Total PF Float", ascending=False)
+          .reset_index(drop=True)
+          .copy()
+      )
+      df_total.index += 1
+      df_total.index.name = "Rank"
+      st.dataframe(
+          df_total[["Team", "Total PF (Inc. Bench)"]],
+          use_container_width=True,
+      )
+  else:
+    st.warning("No data found for this league ID.")
