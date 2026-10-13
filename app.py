@@ -3,7 +3,9 @@ import pandas as pd
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="Dynasty Standings", page_icon="🏈", layout="wide")
+st.set_page_config(
+    page_title="Dynasty League Standings & Max PF", page_icon="🏈", layout="wide"
+)
 
 st.title("🏈 Dynasty Rookie Draft Board & Standings")
 st.markdown("Live standings dynamically fetched from the Sleeper API.")
@@ -24,14 +26,16 @@ def fetch_league_data(lid):
   current_week = nfl_state.get("week", 1)
   playoff_start = league_data.get("settings", {}).get("playoff_week_start", 15)
 
-  if playoff_start and playoff_start > 1:
-    regular_season_weeks = playoff_start - 1
-  else:
-    regular_season_weeks = max(1, min(current_week, 14))
+  regular_season_weeks = (
+      playoff_start - 1
+      if (playoff_start and playoff_start > 1)
+      else max(1, min(current_week, 14))
+  )
 
-  roster_positions = league_data.get("roster_positions", [])
   starter_positions = [
-      p for p in roster_positions if p not in ["BN", "IR", "TAXI"]
+      p
+      for p in league_data.get("roster_positions", [])
+      if p not in ["BN", "IR", "TAXI"]
   ]
   num_starters = len(starter_positions)
 
@@ -42,13 +46,14 @@ def fetch_league_data(lid):
       for u in users
   }
 
-  rosters_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}/rosters")
-  rosters = rosters_res.json() if rosters_res.status_code == 200 else []
+  rosters_res = requests.get(
+      f"https://api.sleeper.app/v1/league/{lid}/rosters"
+  ).json()
 
   roster_to_owner = {}
   roster_records = {}
 
-  for r in rosters:
+  for r in rosters_res:
     rid = r.get("roster_id")
     oid = r.get("owner_id")
     owner_name = user_names.get(oid, f"Team {rid}")
@@ -102,9 +107,10 @@ if league_id:
   if error:
     st.error(error)
   elif df is not None and not df.empty:
-    col_left, col_right = st.columns(2)
+    col1, col2 = st.columns(2)
 
-    with col_left:
+    with col1:
+      # 1. Reverse Max PF Draft Board
       st.subheader("📋 1st Round Rookie Draft Board")
       st.caption("Lowest Max PF determines rookie pick position.")
 
@@ -113,4 +119,33 @@ if league_id:
           .reset_index(drop=True)
           .copy()
       )
-      df_draft.index +=
+      df_draft.index += 1
+      # Create explicit Pick column to avoid index serialization issues
+      df_draft["Pick"] = [f"1.{i:02d}" for i in df_draft.index]
+
+      st.dataframe(
+          df_draft[["Pick", "Team", "Record", "Max PF"]],
+          use_container_width=True,
+          hide_index=True,
+      )
+
+    with col2:
+      # 2. Total PF Standings Breakdown
+      st.subheader("📈 Ranked by Total PF (Inc. Bench)")
+      st.caption("Total points scored across starter & bench spots.")
+
+      df_total = (
+          df.sort_values(by="Total PF Float", ascending=False)
+          .reset_index(drop=True)
+          .copy()
+      )
+      df_total.index += 1
+      df_total.index.name = "Rank"
+
+      st.dataframe(
+          df_total[["Team", "Record", "Total PF (Inc. Bench)"]],
+          use_container_width=True,
+          hide_index=False,
+      )
+  else:
+    st.warning("No data found for this league ID.")
