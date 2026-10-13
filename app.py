@@ -93,7 +93,7 @@ if league_id:
   if error:
     st.error(error)
   elif df is not None and not df.empty:
-    # 1. Reverse Max PF Draft Board (1.01, 1.02 format)
+    # 1. Reverse Max PF Draft Board (Compact layout)
     st.subheader("📋 1st Round Rookie Draft Board (Reverse Max PF)")
     st.caption("Lowest Max PF determines pick position.")
 
@@ -103,14 +103,19 @@ if league_id:
         .copy()
     )
     df_draft.index += 1
-    # Format index as 1.01, 1.02, etc.
     df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
     df_draft.index.name = "Pick"
-    st.table(df_draft[["Team", "Max PF"]])
+
+    # Using dataframe with use_container_width=False tightens the table width
+    st.dataframe(
+        df_draft[["Team", "Max PF"]],
+        use_container_width=False,
+        hide_index=False,
+    )
 
     st.markdown("---")
 
-    # 2. Side-by-Side Standings Breakdown with numbered rankings
+    # 2. Side-by-Side Standings Breakdown (Compact layout)
     col1, col2 = st.columns(2)
 
     with col1:
@@ -122,7 +127,11 @@ if league_id:
       )
       df_max.index += 1
       df_max.index.name = "Rank"
-      st.table(df_max[["Team", "Max PF"]])
+      st.dataframe(
+          df_max[["Team", "Max PF"]],
+          use_container_width=False,
+          hide_index=False,
+      )
 
     with col2:
       st.subheader("📈 Ranked by Total PF (Inc. Bench)")
@@ -133,6 +142,10 @@ if league_id:
       )
       df_total.index += 1
       df_total.index.name = "Rank"
-      st.table(df_total[["Team", "Total PF (Inc. Bench)"]])
+      st.dataframe(
+          df_total[["Team", "Total PF (Inc. Bench)"]],
+          use_container_width=False,
+          hide_index=False,
+      )
   else:
     st.warning("No data found for this league ID.")
