@@ -16,7 +16,7 @@ st.markdown(
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
 
-@st.cache_data(ttl=30)  # Updates every 30 seconds
+@st.cache_data(ttl=30)
 def fetch_league_data(lid):
   # 1. Fetch League & NFL State
   league_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}")
@@ -85,11 +85,11 @@ def fetch_league_data(lid):
       traded_picks_res.json() if traded_picks_res.status_code == 200 else []
   )
 
-  # Map original roster_id to current owner display_name for 1st-round picks
   current_pick_owners = {}
   for rid in roster_to_owner:
     current_pick_owners[rid] = roster_to_owner[rid]
 
   next_season = str(int(season) + 1)
   for tp in traded_picks:
-    if str(tp.get("season")) == next_season and tp.get("
+    s_match = str(tp.get("season")) == next_season
+    r_match
