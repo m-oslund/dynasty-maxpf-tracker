@@ -123,23 +123,4 @@ if league_id:
       )
       df_draft.index += 1
       df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
-      df_draft.index.name = "Pick"
-
-      st.table(df_draft[["Team", "Record", "Max PF"]])
-
-    with col2:
-      # 2. Reverse Total PF Breakdown
-      st.subheader("📈 Total PF (Reverse Order)")
-      st.caption("Lowest Total PF to highest Total PF.")
-
-      df_total = (
-          df.sort_values(by="Total PF Float", ascending=True)
-          .reset_index(drop=True)
-          .copy()
-      )
-      df_total.index += 1
-      df_total.index.name = "Rank"
-
-      st.table(df_total[["Team", "Record", "Total PF (Inc. Bench)"]])
-  else:
-    st.warning("No data found for this league ID.")
+      df
