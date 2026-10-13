@@ -97,7 +97,7 @@ def fetch_league_data(lid):
             "Max PF Float": round(max_pf[rid], 2),
             "Total PF Float": round(total_bench_pf[rid], 2),
             "Max PF": f"{max_pf[rid]:,.2f}",
-            "Total PF (Inc. Bench)": f"{total_bench_pf[rid]:,.2f}",
+            "Total PF": f"{total_bench_pf[rid]:,.2f}",
         })
 
     return pd.DataFrame(data), None
@@ -137,3 +137,10 @@ if league_id:
                 .reset_index(drop=True)
                 .copy()
             )
+            df_total.index += 1
+            df_total.index = [f"1.{i:02d}" for i in df_total.index]
+            df_total.index.name = "Pick"
+
+            st.table(df_total[["Team", "Total PF", "Record"]])
+    else:
+        st.warning("No data found for this league ID.")
