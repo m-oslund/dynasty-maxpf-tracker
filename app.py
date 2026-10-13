@@ -125,10 +125,11 @@ if league_id:
             .reset_index(drop=True)
             .copy()
         )
-        df_standings.index += 1
-        df_standings.index.name = "Rank"
-
-        st.table(df_standings[["Team", "Record"]])
+        st.dataframe(
+            df_standings[["Team", "Record"]],
+            hide_index=True,
+            use_container_width=False,
+        )
 
         st.markdown("---")
 
@@ -141,11 +142,13 @@ if league_id:
             .reset_index(drop=True)
             .copy()
         )
-        df_draft.index += 1
-        df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
-        df_draft.index.name = "Pick"
+        df_draft.insert(0, "Pick", [f"1.{i:02d}" for i in range(1, len(df_draft) + 1)])
 
-        st.table(df_draft[["Team", "Max PF", "Record"]])
+        st.dataframe(
+            df_draft[["Pick", "Team", "Max PF", "Record"]],
+            hide_index=True,
+            use_container_width=False,
+        )
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -158,10 +161,12 @@ if league_id:
             .reset_index(drop=True)
             .copy()
         )
-        df_total.index += 1
-        df_total.index = [f"1.{i:02d}" for i in df_total.index]
-        df_total.index.name = "Pick"
+        df_total.insert(0, "Pick", [f"1.{i:02d}" for i in range(1, len(df_total) + 1)])
 
-        st.table(df_total[["Team", "Total PF", "Record"]])
+        st.dataframe(
+            df_total[["Pick", "Team", "Total PF", "Record"]],
+            hide_index=True,
+            use_container_width=False,
+        )
     else:
         st.warning("No data found for this league ID.")
