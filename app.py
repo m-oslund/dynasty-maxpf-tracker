@@ -9,8 +9,8 @@ st.set_page_config(
 
 st.title("🏈 League Standings, Max PF & Draft Board")
 st.markdown(
-    "Live standings dynamically fetched from the Sleeper API. Includes live"
-    " traded pick tracking."
+    "Live standings dynamically fetched from the Sleeper API with live traded"
+    " pick tracking."
 )
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
@@ -18,19 +18,17 @@ league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
 @st.cache_data(ttl=30)
 def fetch_league_data(lid):
-  league_url = f"https://api.sleeper.app/v1/league/{lid}"
-  league_res = requests.get(league_url)
+  league_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}")
   if league_res.status_code != 200 or not league_res.json():
     return None, "League not found or invalid League ID."
 
   league_data = league_res.json()
 
   nfl_res = requests.get("https://api.sleeper.app/v1/state/nfl")
-  nfl_state = (
-      nfl_res.json()
-      if nfl_res.status_code == 200
-      else {"week": 6, "season": "2026"}
-  )
+  if nfl_res.status_code == 200:
+    nfl_state = nfl_res.json()
+  else:
+    nfl_state = {"week": 6, "season": "2026"}
 
   current_week = nfl_state.get("week", 6)
   playoff_start = league_data.get("settings", {}).get("playoff_week_start", 15)
@@ -45,30 +43,41 @@ def fetch_league_data(lid):
   starter_positions = [p for p in roster_pos if p not in ["BN", "IR", "TAXI"]]
   num_starters = len(starter_positions)
 
-  users_url = f"https://api.sleeper.app/v1/league/{lid}/users"
-  users_res = requests.get(users_url)
-  users = users_res.json() if users_res.status_code == 200 else []
-  user_names = {
-      u["user_id"]: u.get("display_name", u.get("username", "Unknown"))
-      for u in users
-  }
+  users_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}/users")
+  if users_res.status_code == 200:
+    users = users_res.json()
+  else:
+    users = []
 
-  rosters_url = f"https://api.sleeper.app/v1/league/{lid}/rosters"
-  rosters_res = requests.get(rosters_url)
-  rosters = rosters_res.json() if rosters_res.status_code == 200 else []
+  user_names = {}
+  for u in users:
+    uid = u.get("user_id")
+    uname = u.get("display_name", u.get("username", "Unknown"))
+    user_names[uid] = uname
+
+  rosters_res = requests.get(
+      f"https://api.sleeper.app/v1/league/{lid}/rosters"
+  )
+  if rosters_res.status_code == 200:
+    rosters = rosters_res.json()
+  else:
+    rosters = []
 
   roster_to_owner = {}
+  roster_to_owner_id = {}
   for r in rosters:
     rid = r.get("roster_id")
     oid = r.get("owner_id")
     roster_to_owner[rid] = user_names.get(oid, f"Team {rid}")
+    roster_to_owner_id[rid] = oid
 
   total_bench_pf = defaultdict(float)
   max_pf = defaultdict(float)
 
   for week in range(1, regular_season_weeks + 1):
-    m_url = f"https://api.sleeper.app/v1/league/{lid}/matchups/{week}"
-    res = requests.get(m_url)
+    res = requests.get(
+        f"https://api.sleeper.app/v1/league/{lid}/matchups/{week}"
+    )
     if res.status_code != 200 or not res.json():
       continue
 
@@ -80,19 +89,39 @@ def fetch_league_data(lid):
         sorted_scores = sorted(pts.values(), reverse=True)
         max_pf[rid] += sum(sorted_scores[:num_starters])
 
-  current_pick_owners = {
-      rid: owner_name for rid, owner_name in roster_to_owner.items()
-  }
+  current_pick_owners = {}
+  for rid, owner_name in roster_to_owner.items():
+    current_pick_owners[rid] = owner_name
 
   try:
-    tp_url = f"https://api.sleeper.app/v1/league/{lid}/traded_picks"
-    tp_res = requests.get(tp_url)
+    tp_res = requests.get(
+        f"https://api.sleeper.app/v1/league/{lid}/traded_picks"
+    )
     if tp_res.status_code == 200 and isinstance(tp_res.json(), list):
       next_season = str(int(season) + 1)
       for tp in tp_res.json():
         tp_s = str(tp.get("season"))
         tp_r = tp.get("round")
         orig_rid = tp.get("roster_id")
-        if (
-            tp_s == next_season
-            and tp_r == 1
+        if tp_s == next_season and tp_r == 1 and orig_rid in current_pick_owners:
+          new_owner_id = tp.get("owner_id")
+          current_pick_owners[orig_rid] = user_names.get(
+              new_owner_id, "Traded Owner"
+          )
+  except Exception:
+    pass
+
+  data = []
+  for rid, owner in roster_to_owner.items():
+    data.append({
+        "Original Team": owner,
+        "Current Pick Owner": current_pick_owners.get(rid, owner),
+        "Max PF": round(max_pf[rid], 2),
+        "Total PF (Inc. Bench)": round(total_bench_pf[rid], 2),
+    })
+
+  return pd.DataFrame(data), None
+
+
+if league_id:
+  with st.spinner("Fetching
