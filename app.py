@@ -16,7 +16,7 @@ st.markdown(
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=30)
 def fetch_league_data(lid):
   league_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}")
   if league_res.status_code != 200 or not league_res.json():
