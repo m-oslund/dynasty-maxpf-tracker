@@ -85,17 +85,4 @@ def fetch_league_data(lid):
         if res.status_code != 200 or not res.json():
             continue
 
-        for team in res.json():
-            rid = team.get("roster_id")
-            pts = team.get("players_points", {})
-            if rid and pts:
-                total_bench_pf[rid] += sum(pts.values())
-                sorted_scores = sorted(pts.values(), reverse=True)
-                max_pf[rid] += sum(sorted_scores[:num_starters])
-
-    data = []
-    for rid, owner in roster_to_owner.items():
-        s = roster_sort_data[rid]
-        data.append({
-            "Team": owner,
-            "
+        for team in res.
