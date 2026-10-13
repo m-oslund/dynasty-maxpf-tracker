@@ -67,9 +67,7 @@ def fetch_league_data(lid):
 
     for team in res.json():
       rid = team.get("roster_id")
-      pts = team.get(
-          "players_points", {}
-      )  # Note: Sleeper players_points can be floats
+      pts = team.get("players_points", {})
       if rid and pts:
         total_bench_pf[rid] += sum(pts.values())
         sorted_scores = sorted(pts.values(), reverse=True)
@@ -80,6 +78,8 @@ def fetch_league_data(lid):
     data.append({
         "roster_id": rid,
         "Team": owner,
+        "Max PF Num": round(max_pf[rid], 2),
+        "Total PF Num": round(total_bench_pf[rid], 2),
         "Max PF": f"{max_pf[rid]:.2f}",
         "Total PF (Inc. Bench)": f"{total_bench_pf[rid]:.2f}",
     })
@@ -93,42 +93,46 @@ if league_id:
   if error:
     st.error(error)
   elif df is not None and not df.empty:
-    # 1. Reverse Max PF Draft Board
+    # 1. Reverse Max PF Draft Board (1.01, 1.02 format)
     st.subheader("📋 1st Round Rookie Draft Board (Reverse Max PF)")
     st.caption("Lowest Max PF determines pick position.")
 
     df_draft = (
-        df.sort_values(by="Max PF", ascending=True)
+        df.sort_values(by="Max PF Num", ascending=True)
         .reset_index(drop=True)
         .copy()
     )
     df_draft.index += 1
-    df_draft.index.name = "Pick Slot"
+    # Format index as 1.01, 1.02, etc.
+    df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
+    df_draft.index.name = "Pick"
     st.table(df_draft[["Team", "Max PF"]])
 
     st.markdown("---")
 
-    # 2. Side-by-Side Standings Breakdown
+    # 2. Side-by-Side Standings Breakdown with numbered rankings
     col1, col2 = st.columns(2)
 
     with col1:
       st.subheader("📊 Ranked by Max PF")
       df_max = (
-          df.sort_values(by="Max PF", ascending=False)
+          df.sort_values(by="Max PF Num", ascending=False)
           .reset_index(drop=True)
           .copy()
       )
       df_max.index += 1
+      df_max.index.name = "Rank"
       st.table(df_max[["Team", "Max PF"]])
 
     with col2:
       st.subheader("📈 Ranked by Total PF (Inc. Bench)")
       df_total = (
-          df.sort_values(by="Total PF (Inc. Bench)", ascending=False)
+          df.sort_values(by="Total PF Num", ascending=False)
           .reset_index(drop=True)
           .copy()
       )
       df_total.index += 1
+      df_total.index.name = "Rank"
       st.table(df_total[["Team", "Total PF (Inc. Bench)"]])
   else:
     st.warning("No data found for this league ID.")
