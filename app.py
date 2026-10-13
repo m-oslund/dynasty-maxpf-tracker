@@ -7,7 +7,7 @@ st.set_page_config(
     page_title="Dynasty League Standings & Max PF", page_icon="🏈", layout="wide"
 )
 
-st.title("🏈 League Standings & Max PF Tracker")
+st.title("🏈 Dynasty Rookie Draft Board & Standings")
 st.markdown("Live standings dynamically fetched from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
@@ -39,7 +39,7 @@ def fetch_league_data(lid):
   ]
   num_starters = len(starter_positions)
 
-  # 2. Users & Rosters
+  # 2. Fetch Users & Rosters (including W-L Records)
   users = requests.get(f"https://api.sleeper.app/v1/league/{lid}/users").json()
   user_names = {
       u["user_id"]: u.get("display_name", u.get("username", "Unknown"))
@@ -49,10 +49,25 @@ def fetch_league_data(lid):
   rosters = requests.get(
       f"https://api.sleeper.app/v1/league/{lid}/rosters"
   ).json()
-  roster_to_owner = {
-      r["roster_id"]: user_names.get(r.get("owner_id"), f"Team {r['roster_id']}")
-      for r in rosters
-  }
+
+  roster_to_owner = {}
+  roster_records = {}
+
+  for r in rosters:
+    rid = r["roster_id"]
+    owner_name = user_names.get(r.get("owner_id"), f"Team {rid}")
+    roster_to_owner[rid] = owner_name
+
+    # Pull W-L-T settings from Sleeper roster settings
+    settings = r.get("settings", {})
+    wins = settings.get("wins", 0)
+    losses = settings.get("losses", 0)
+    ties = settings.get("ties", 0)
+
+    if ties > 0:
+      roster_records[rid] = f"{wins}-{losses}-{ties}"
+    else:
+      roster_records[rid] = f"{wins}-{losses}"
 
   total_bench_pf = defaultdict(float)
   max_pf = defaultdict(float)
@@ -78,6 +93,7 @@ def fetch_league_data(lid):
     data.append({
         "roster_id": rid,
         "Team": owner,
+        "Record": roster_records.get(rid, "0-0"),
         "Max PF Float": round(max_pf[rid], 2),
         "Total PF Float": round(total_bench_pf[rid], 2),
         "Max PF": f"{max_pf[rid]:,.2f}",
@@ -93,45 +109,32 @@ if league_id:
   if error:
     st.error(error)
   elif df is not None and not df.empty:
-    # 1. Reverse Max PF Draft Board
-    st.subheader("📋 1st Round Rookie Draft Board (Reverse Max PF)")
-    st.caption("Lowest Max PF determines pick position.")
+    col_left, col_right = st.columns(2)
 
-    df_draft = (
-        df.sort_values(by="Max PF Float", ascending=True)
-        .reset_index(drop=True)
-        .copy()
-    )
-    df_draft.index += 1
-    df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
-    df_draft.index.name = "Pick"
+    with col_left:
+      # 1. Reverse Max PF Draft Board with Record
+      st.subheader("📋 1st Round Rookie Draft Board")
+      st.caption("Lowest Max PF determines rookie pick position.")
 
-    st.dataframe(
-        df_draft[["Team", "Max PF"]],
-        use_container_width=True,
-    )
-
-    st.markdown("---")
-
-    # 2. Side-by-Side Standings Breakdown
-    col1, col2 = st.columns(2)
-
-    with col1:
-      st.subheader("📊 Ranked by Max PF")
-      df_max = (
-          df.sort_values(by="Max PF Float", ascending=False)
+      df_draft = (
+          df.sort_values(by="Max PF Float", ascending=True)
           .reset_index(drop=True)
           .copy()
       )
-      df_max.index += 1
-      df_max.index.name = "Rank"
+      df_draft.index += 1
+      df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
+      df_draft.index.name = "Pick"
+
       st.dataframe(
-          df_max[["Team", "Max PF"]],
+          df_draft[["Team", "Record", "Max PF"]],
           use_container_width=True,
       )
 
-    with col2:
+    with col_right:
+      # 2. Total PF Standings Breakdown with Record
       st.subheader("📈 Ranked by Total PF (Inc. Bench)")
+      st.caption("Total points scored across starter & bench spots.")
+
       df_total = (
           df.sort_values(by="Total PF Float", ascending=False)
           .reset_index(drop=True)
@@ -139,9 +142,7 @@ if league_id:
       )
       df_total.index += 1
       df_total.index.name = "Rank"
+
       st.dataframe(
-          df_total[["Team", "Total PF (Inc. Bench)"]],
+          df_total[["Team", "Record", "Total PF (Inc. Bench)"]],
           use_container_width=True,
-      )
-  else:
-    st.warning("No data found for this league ID.")
