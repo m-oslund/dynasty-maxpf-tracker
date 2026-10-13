@@ -4,10 +4,12 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="Dynasty League Standings & Max PF", page_icon="🏈", layout="wide"
+    page_title="Armchair Football League Draft Board",
+    page_icon="🏈",
+    layout="wide",
 )
 
-st.title("🏈 Dynasty Rookie Draft Board & Standings")
+st.title("🏈 Armchair Football League Draft Board")
 st.markdown("Live standings dynamically fetched from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
@@ -103,6 +105,3 @@ def fetch_league_data(lid):
 
 if league_id:
   df, error = fetch_league_data(league_id)
-
-  if error:
-    st.error
