@@ -13,16 +13,13 @@ league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
 @st.cache_data(ttl=30)
 def fetch_league_data(lid):
-  league_res = requests.get("https://api.sleeper.app/v1/league/" + str(lid))
+  league_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}")
   if league_res.status_code != 200 or not league_res.json():
     return None, "League not found or invalid League ID."
 
   league_data = league_res.json()
   nfl_res = requests.get("https://api.sleeper.app/v1/state/nfl")
-  if nfl_res.status_code == 200:
-    nfl_state = nfl_res.json()
-  else:
-    nfl_state = {"week": 1}
+  nfl_state = nfl_res.json() if nfl_res.status_code == 200 else {"week": 1}
 
   current_week = nfl_state.get("week", 1)
   playoff_start = league_data.get("settings", {}).get("playoff_week_start", 15)
@@ -38,19 +35,14 @@ def fetch_league_data(lid):
   ]
   num_starters = len(starter_positions)
 
-  users_res = requests.get(
-      "https://api.sleeper.app/v1/league/" + str(lid) + "/users"
-  )
+  users_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}/users")
   users = users_res.json() if users_res.status_code == 200 else []
-  user_names = {}
-  for u in users:
-    uid = u.get("user_id")
-    uname = u.get("display_name", u.get("username", "Unknown"))
-    user_names[uid] = uname
+  user_names = {
+      u.get("user_id"): u.get("display_name", u.get("username", "Unknown"))
+      for u in users
+  }
 
-  rosters_res = requests.get(
-      "https://api.sleeper.app/v1/league/" + str(lid) + "/rosters"
-  )
+  rosters_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}/rosters")
   rosters = rosters_res.json() if rosters_res.status_code == 200 else []
 
   roster_to_owner = {}
@@ -59,7 +51,7 @@ def fetch_league_data(lid):
   for r in rosters:
     rid = r.get("roster_id")
     oid = r.get("owner_id")
-    owner_name = user_names.get(oid, "Team " + str(rid))
+    owner_name = user_names.get(oid, f"Team {rid}")
     roster_to_owner[rid] = owner_name
 
     settings = r.get("settings", {})
@@ -68,21 +60,17 @@ def fetch_league_data(lid):
     ties = settings.get("ties", 0)
 
     if ties > 0:
-      roster_records[rid] = str(wins) + "-" + str(losses) + "-" + str(ties)
+      roster_records[rid] = f"{wins}-{losses}-{ties}"
     else:
-      roster_records[rid] = str(wins) + "-" + str(losses)
+      roster_records[rid] = f"{wins}-{losses}"
 
   total_bench_pf = defaultdict(float)
   max_pf = defaultdict(float)
 
   for week in range(1, regular_season_weeks + 1):
-    m_url = (
-        "https://api.sleeper.app/v1/league/"
-        + str(lid)
-        + "/matchups/"
-        + str(week)
+    res = requests.get(
+        f"https://api.sleeper.app/v1/league/{lid}/matchups/{week}"
     )
-    res = requests.get(m_url)
     if res.status_code != 200 or not res.json():
       continue
 
@@ -125,6 +113,4 @@ if league_id:
           .reset_index(drop=True)
           .copy()
       )
-      df_draft.index += 1
-      df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
-      df_draft.index.name = "Pick"
+      df_draft.index +=
