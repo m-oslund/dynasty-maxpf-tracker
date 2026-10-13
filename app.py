@@ -105,47 +105,4 @@ if league_id:
   df, error = fetch_league_data(league_id)
 
   if error:
-    st.error(error)
-  elif df is not None and not df.empty:
-    col1, col2 = st.columns(2)
-
-    with col1:
-      # 1. Reverse Max PF Draft Board
-      st.subheader("📋 1st Round Rookie Draft Board")
-      st.caption("Lowest Max PF determines rookie pick position.")
-
-      df_draft = (
-          df.sort_values(by="Max PF Float", ascending=True)
-          .reset_index(drop=True)
-          .copy()
-      )
-      df_draft.index += 1
-      # Create explicit Pick column to avoid index serialization issues
-      df_draft["Pick"] = [f"1.{i:02d}" for i in df_draft.index]
-
-      st.dataframe(
-          df_draft[["Pick", "Team", "Record", "Max PF"]],
-          use_container_width=True,
-          hide_index=True,
-      )
-
-    with col2:
-      # 2. Total PF Standings Breakdown
-      st.subheader("📈 Ranked by Total PF (Inc. Bench)")
-      st.caption("Total points scored across starter & bench spots.")
-
-      df_total = (
-          df.sort_values(by="Total PF Float", ascending=False)
-          .reset_index(drop=True)
-          .copy()
-      )
-      df_total.index += 1
-      df_total.index.name = "Rank"
-
-      st.dataframe(
-          df_total[["Team", "Record", "Total PF (Inc. Bench)"]],
-          use_container_width=True,
-          hide_index=False,
-      )
-  else:
-    st.warning("No data found for this league ID.")
+    st.error
