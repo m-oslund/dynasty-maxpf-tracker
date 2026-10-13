@@ -3,46 +3,107 @@ import pandas as pd
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="Dynasty Tracker", page_icon="🏈", layout="wide")
+st.set_page_config(
+    page_title="Dynasty League Standings & Max PF", page_icon="🏈", layout="wide"
+)
 
-st.title("🏈 Standings & Max PF Tracker")
-st.markdown("Live Sleeper standings with traded pick tracking.")
+st.title("🏈 League Standings & Max PF Tracker")
+st.markdown("Live standings dynamically fetched from the Sleeper API.")
 
-league_id = st.sidebar.text_input("League ID:", "1314874337139904512")
+league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
 
 @st.cache_data(ttl=30)
 def fetch_league_data(lid):
-  u_league = "https://api.sleeper.app/v1/league/" + lid
-  res_l = requests.get(u_league)
-  if res_l.status_code != 200 or not res_l.json():
-    return None, "Invalid League ID."
+  # 1. Fetch League & NFL State
+  league_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}")
+  if league_res.status_code != 200 or not league_res.json():
+    return None, "League not found or invalid League ID."
 
-  league_data = res_l.json()
-
-  res_n = requests.get("https://api.sleeper.app/v1/state/nfl")
-  if res_n.status_code == 200:
-    nfl_state = res_n.json()
-  else:
-    nfl_state = {"week": 1, "season": "2026"}
+  league_data = league_res.json()
+  nfl_state = requests.get("https://api.sleeper.app/v1/state/nfl").json()
 
   current_week = nfl_state.get("week", 1)
   playoff_start = league_data.get("settings", {}).get("playoff_week_start", 15)
-  season = str(league_data.get("season", "2026"))
 
-  if playoff_start and playoff_start > 1:
-    regular_weeks = playoff_start - 1
-  else:
-    regular_weeks = max(1, min(current_week, 14))
+  regular_season_weeks = (
+      playoff_start - 1
+      if (playoff_start and playoff_start > 1)
+      else max(1, min(current_week, 14))
+  )
 
-  roster_pos = league_data.get("roster_positions", [])
-  starters = [p for p in roster_pos if p not in ["BN", "IR", "TAXI"]]
-  num_starters = len(starters)
+  starter_positions = [
+      p
+      for p in league_data.get("roster_positions", [])
+      if p not in ["BN", "IR", "TAXI"]
+  ]
+  num_starters = len(starter_positions)
 
-  res_u = requests.get("https://api.sleeper.app/v1/league/" + lid + "/users")
-  users = res_u.json() if res_u.status_code == 200 else []
+  # 2. Users & Rosters
+  users = requests.get(f"https://api.sleeper.app/v1/league/{lid}/users").json()
+  user_names = {
+      u["user_id"]: u.get("display_name", u.get("username", "Unknown"))
+      for u in users
+  }
 
-  user_names = {}
-  for u in users:
-    uid = u.get("user_id")
-    uname = u.get("display_name", u.get("username", "Unknown"))
+  rosters = requests.get(
+      f"https://api.sleeper.app/v1/league/{lid}/rosters"
+  ).json()
+  roster_to_owner = {
+      r["roster_id"]: user_names.get(r.get("owner_id"), f"Team {r['roster_id']}")
+      for r in rosters
+  }
+
+  total_bench_pf = defaultdict(float)
+  max_pf = defaultdict(float)
+
+  # 3. Calculate Scores
+  for week in range(1, regular_season_weeks + 1):
+    res = requests.get(
+        f"https://api.sleeper.app/v1/league/{lid}/matchups/{week}"
+    )
+    if res.status_code != 200 or not res.json():
+      continue
+
+    for team in res.json():
+      rid = team.get("roster_id")
+      pts = team.get("players_points", {})
+      if rid and pts:
+        total_bench_pf[rid] += sum(pts.values())
+        sorted_scores = sorted(pts.values(), reverse=True)
+        max_pf[rid] += sum(sorted_scores[:num_starters])
+
+  data = []
+  for rid, owner in roster_to_owner.items():
+    data.append({
+        "roster_id": rid,
+        "Team": owner,
+        "Max PF": round(max_pf[rid], 2),
+        "Total PF (Inc. Bench)": round(total_bench_pf[rid], 2),
+    })
+
+  return pd.DataFrame(data), None
+
+
+if league_id:
+  df, error = fetch_league_data(league_id)
+
+  if error:
+    st.error(error)
+  elif df is not None and not df.empty:
+    # 1. Reverse Max PF Draft Board
+    st.subheader("📋 1st Round Rookie Draft Board (Reverse Max PF)")
+    st.caption("Lowest Max PF determines pick position.")
+
+    df_draft = (
+        df.sort_values(by="Max PF", ascending=True)
+        .reset_index(drop=True)
+        .copy()
+    )
+    df_draft.index += 1
+    df_draft.index.name = "Pick Slot"
+    st.table(df_draft[["Team", "Max PF"]])
+
+    st.markdown("---")
+
+    # 2. Side-by-Side Stand
