@@ -4,13 +4,13 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="AFL Standings & Draft Board",
+    page_title="AFL Standings and Draft Board",
     page_icon="🏈",
     layout="wide",
 )
 
-st.title("🏈 AFL Standings & Draft Board")
-st.markdown("Live standings & draft board dynamically refreshed every 30 seconds from the Sleeper API.")
+st.title("🏈 AFL Standings and Draft Board")
+st.markdown("Live standings dynamically refreshed every 30 seconds from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
@@ -117,7 +117,7 @@ if league_id:
     if error:
         st.error(error)
     elif df is not None and not df.empty:
-        # 1. League Standings (Tightened)
+        # 1. League Standings with standard numeric ranking index
         st.subheader("🏆 League Standings")
 
         df_standings = (
@@ -128,13 +128,11 @@ if league_id:
         df_standings.index += 1
         df_standings.index.name = "Rank"
 
-        c1, c2, c3 = st.columns([1, 2, 1])
-        with c2:
-            st.table(df_standings[["Team", "Record"]])
+        st.table(df_standings[["Team", "Record"]])
 
         st.markdown("---")
 
-        # 2. Rookie Draft Order (Tightened)
+        # 2. Rookie Draft Order
         st.subheader("📋 Rookie Draft Order")
         st.caption("Lowest Max PF determines rookie pick position.")
 
@@ -147,13 +145,11 @@ if league_id:
         df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
         df_draft.index.name = "Pick"
 
-        d1, d2, d3 = st.columns([1, 2, 1])
-        with d2:
-            st.table(df_draft[["Team", "Max PF", "Record"]])
+        st.table(df_draft[["Team", "Max PF", "Record"]])
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 3. Total PF (Tightened)
+        # 3. Total PF
         st.subheader("📈 Total PF (Reverse Order)")
         st.caption("Lowest Total PF to highest Total PF.")
 
@@ -166,8 +162,6 @@ if league_id:
         df_total.index = [f"1.{i:02d}" for i in df_total.index]
         df_total.index.name = "Pick"
 
-        t1, t2, t3 = st.columns([1, 2, 1])
-        with t2:
-            st.table(df_total[["Team", "Total PF", "Record"]])
+        st.table(df_total[["Team", "Total PF", "Record"]])
     else:
         st.warning("No data found for this league ID.")
