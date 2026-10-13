@@ -117,7 +117,7 @@ if league_id:
     if error:
         st.error(error)
     elif df is not None and not df.empty:
-        # 1. League Standings
+        # 1. League Standings (Tightened)
         st.subheader("🏆 League Standings")
 
         df_standings = (
@@ -128,11 +128,13 @@ if league_id:
         df_standings.index += 1
         df_standings.index.name = "Rank"
 
-        st.table(df_standings[["Team", "Record"]])
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            st.table(df_standings[["Team", "Record"]])
 
         st.markdown("---")
 
-        # 2. Stacked Tables (Draft Board on top, Total PF underneath)
+        # 2. Draft Board (Tightened)
         st.subheader("📋 1st Round Rookie Draft Board")
         st.caption("Lowest Max PF determines rookie pick position.")
 
@@ -145,10 +147,13 @@ if league_id:
         df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
         df_draft.index.name = "Pick"
 
-        st.table(df_draft[["Team", "Max PF", "Record"]])
+        d1, d2, d3 = st.columns([1, 2, 1])
+        with d2:
+            st.table(df_draft[["Team", "Max PF", "Record"]])
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # 3. Total PF (Tightened)
         st.subheader("📈 Total PF (Reverse Order)")
         st.caption("Lowest Total PF to highest Total PF.")
 
@@ -161,6 +166,8 @@ if league_id:
         df_total.index = [f"1.{i:02d}" for i in df_total.index]
         df_total.index.name = "Pick"
 
-        st.table(df_total[["Team", "Total PF", "Record"]])
+        t1, t2, t3 = st.columns([1, 2, 1])
+        with t2:
+            st.table(df_total[["Team", "Total PF", "Record"]])
     else:
         st.warning("No data found for this league ID.")
