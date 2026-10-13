@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 st.title("🏈 Armchair Football League Draft Board")
-st.markdown("Live standings dynamically fetched from the Sleeper API.")
+st.markdown("Live standings dynamically refreshed every 30 seconds from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
@@ -117,8 +117,8 @@ if league_id:
     if error:
         st.error(error)
     elif df is not None and not df.empty:
+        # 1. League Standings
         st.subheader("🏆 League Standings")
-        st.caption("Live standings dynamically refreshed every 30 seconds from the Sleeper API")
 
         df_standings = (
             df.sort_values(by=["Wins", "Ties", "FPTS"], ascending=[False, False, False])
@@ -128,42 +128,39 @@ if league_id:
         df_standings.index += 1
         df_standings.index.name = "Rank"
 
-        c_left, c_mid, c_right = st.columns([1, 2, 1])
-        with c_mid:
-            st.table(df_standings[["Team", "Record"]])
+        st.table(df_standings[["Team", "Record"]])
 
         st.markdown("---")
 
-        col1, col2 = st.columns(2)
+        # 2. Stacked Tables (Draft Board on top, Total PF underneath)
+        st.subheader("📋 1st Round Rookie Draft Board")
+        st.caption("Lowest Max PF determines rookie pick position.")
 
-        with col1:
-            st.subheader("📋 1st Round Rookie Draft Board")
-            st.caption("Lowest Max PF determines rookie pick position.")
+        df_draft = (
+            df.sort_values(by="Max PF Float", ascending=True)
+            .reset_index(drop=True)
+            .copy()
+        )
+        df_draft.index += 1
+        df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
+        df_draft.index.name = "Pick"
 
-            df_draft = (
-                df.sort_values(by="Max PF Float", ascending=True)
-                .reset_index(drop=True)
-                .copy()
-            )
-            df_draft.index += 1
-            df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
-            df_draft.index.name = "Pick"
+        st.table(df_draft[["Team", "Max PF", "Record"]])
 
-            st.table(df_draft[["Team", "Max PF", "Record"]])
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        with col2:
-            st.subheader("📈 Total PF (Reverse Order)")
-            st.caption("Lowest Total PF to highest Total PF.")
+        st.subheader("📈 Total PF (Reverse Order)")
+        st.caption("Lowest Total PF to highest Total PF.")
 
-            df_total = (
-                df.sort_values(by="Total PF Float", ascending=True)
-                .reset_index(drop=True)
-                .copy()
-            )
-            df_total.index += 1
-            df_total.index = [f"1.{i:02d}" for i in df_total.index]
-            df_total.index.name = "Pick"
+        df_total = (
+            df.sort_values(by="Total PF Float", ascending=True)
+            .reset_index(drop=True)
+            .copy()
+        )
+        df_total.index += 1
+        df_total.index = [f"1.{i:02d}" for i in df_total.index]
+        df_total.index.name = "Pick"
 
-            st.table(df_total[["Team", "Total PF", "Record"]])
+        st.table(df_total[["Team", "Total PF", "Record"]])
     else:
         st.warning("No data found for this league ID.")
