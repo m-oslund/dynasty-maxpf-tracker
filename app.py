@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🏈 Armchair Football League Draft Board & Standings")
+st.title("🏈 Armchair Football League Draft Board")
 st.markdown("Live standings dynamically fetched from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
@@ -54,7 +54,6 @@ def fetch_league_data(lid):
 
   roster_to_owner = {}
   roster_records = {}
-  roster_sort_data = {}
 
   for r in rosters_res:
     rid = r.get("roster_id")
@@ -66,9 +65,6 @@ def fetch_league_data(lid):
     wins = settings.get("wins", 0)
     losses = settings.get("losses", 0)
     ties = settings.get("ties", 0)
-    fpts = settings.get("fpts", 0) + (settings.get("fpts_decimal", 0) / 100.0)
-
-    roster_sort_data[rid] = {"wins": wins, "losses": losses, "ties": ties, "fpts": fpts}
 
     if ties > 0:
       roster_records[rid] = f"{wins}-{losses}-{ties}"
@@ -95,14 +91,9 @@ def fetch_league_data(lid):
 
   data = []
   for rid, owner in roster_to_owner.items():
-    s = roster_sort_data[rid]
     data.append({
         "Team": owner,
         "Record": roster_records.get(rid, "0-0"),
-        "Wins": s["wins"],
-        "Losses": s["losses"],
-        "Ties": s["ties"],
-        "FPTS": s["fpts"],
         "Max PF Float": round(max_pf[rid], 2),
         "Total PF Float": round(total_bench_pf[rid], 2),
         "Max PF": f"{max_pf[rid]:,.2f}",
@@ -118,28 +109,10 @@ if league_id:
   if error:
     st.error(error)
   elif df is not None and not df.empty:
-    # 1. Standings Table Ranked from First to Last by Record
-    st.subheader("🏆 League Standings (Record)")
-    st.caption("Ranked from first to last by Wins, Losses, Ties, and Points For.")
-
-    df_standings = (
-        df.sort_values(
-            by=["Wins", "Ties", "FPTS"], ascending=[False, False, False]
-        )
-        .reset_index(drop=True)
-        .copy()
-    )
-    df_standings.index += 1
-    df_standings.index.name = "Rank"
-
-    st.table(df_standings[["Team", "Record", "FPTS"]])
-
-    st.markdown("---")
-
-    # 2. Side-by-Side Draft Board & Total PF
     col1, col2 = st.columns(2)
 
     with col1:
+      # 1. Reverse Max PF Draft Board
       st.subheader("📋 1st Round Rookie Draft Board")
       st.caption("Lowest Max PF determines rookie pick position.")
 
@@ -155,10 +128,18 @@ if league_id:
       st.table(df_draft[["Team", "Record", "Max PF"]])
 
     with col2:
+      # 2. Reverse Total PF Breakdown
       st.subheader("📈 Total PF (Reverse Order)")
       st.caption("Lowest Total PF to highest Total PF.")
 
       df_total = (
           df.sort_values(by="Total PF Float", ascending=True)
           .reset_index(drop=True)
-          .copy
+          .copy()
+      )
+      df_total.index += 1
+      df_total.index.name = "Rank"
+
+      st.table(df_total[["Team", "Record", "Total PF (Inc. Bench)"]])
+  else:
+    st.warning("No data found for this league ID.")
