@@ -16,7 +16,7 @@ st.markdown(
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
 
 
-@st.cache_data(ttl=30)  # Updated to 60s for game-day responsiveness
+@st.cache_data(ttl=30)  # Updates every 30 seconds
 def fetch_league_data(lid):
   # 1. Fetch League & NFL State
   league_res = requests.get(f"https://api.sleeper.app/v1/league/{lid}")
@@ -58,9 +58,6 @@ def fetch_league_data(lid):
       for r in rosters
   }
 
-  # Map roster_id to current owner_id
-  roster_to_owner_id = {r["roster_id"]: r.get("owner_id") for r in rosters}
-
   total_bench_pf = defaultdict(float)
   max_pf = defaultdict(float)
 
@@ -91,23 +88,8 @@ def fetch_league_data(lid):
   # Map original roster_id to current owner display_name for 1st-round picks
   current_pick_owners = {}
   for rid in roster_to_owner:
-    current_pick_owners[rid] = roster_to_owner[rid]  # Default: owns own pick
+    current_pick_owners[rid] = roster_to_owner[rid]
 
-  # Check next season's traded 1st round picks
   next_season = str(int(season) + 1)
   for tp in traded_picks:
-    if str(tp.get("season")) == next_season and tp.get("round") == 1:
-      orig_roster_id = tp.get("roster_id")
-      new_owner_id = tp.get("owner_id")
-      current_pick_owners[orig_roster_id] = user_names.get(
-          new_owner_id, "Traded"
-      )
-
-  data = []
-  for rid, owner in roster_to_owner.items():
-    data.append({
-        "roster_id": rid,
-        "Original Team": owner,
-        "Current Pick Owner": current_pick_owners[rid],
-        "Max PF": round(max_pf[rid], 2),
-        "Total PF (Inc. Bench
+    if str(tp.get("season")) == next_season and tp.get("
