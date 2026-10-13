@@ -112,7 +112,7 @@ if league_id:
     col1, col2 = st.columns(2)
 
     with col1:
-      # 1. Reverse Max PF Draft Board
+      # Table 1: Reverse Max PF Draft Board
       st.subheader("📋 1st Round Rookie Draft Board")
       st.caption("Lowest Max PF determines rookie pick position.")
 
@@ -123,4 +123,23 @@ if league_id:
       )
       df_draft.index += 1
       df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
-      df
+      df_draft.index.name = "Pick"
+
+      st.table(df_draft[["Team", "Max PF", "Record"]])
+
+    with col2:
+      # Table 2: Reverse Total PF
+      st.subheader("📈 Total PF (Reverse Order)")
+      st.caption("Lowest Total PF to highest Total PF.")
+
+      df_total = (
+          df.sort_values(by="Total PF Float", ascending=True)
+          .reset_index(drop=True)
+          .copy()
+      )
+      df_total.index += 1
+      df_total.index.name = "Rank"
+
+      st.table(df_total[["Team", "Total PF (Inc. Bench)", "Record"]])
+  else:
+    st.warning("No data found for this league ID.")
