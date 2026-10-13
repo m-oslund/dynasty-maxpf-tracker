@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🏈 AFL Standings and Draft Board")
+st.title("🏈 AFL Standings & Draft Board")
 st.markdown("Live standings and draft order refreshed every 30 seconds from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
