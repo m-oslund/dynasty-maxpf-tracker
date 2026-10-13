@@ -24,9 +24,9 @@ def fetch_league_data(lid):
   if res_n.status_code == 200:
     nfl_state = res_n.json()
   else:
-    nfl_state = {"week": 6, "season": "2026"}
+    nfl_state = {"week": 1, "season": "2026"}
 
-  current_week = nfl_state.get("week", 6)
+  current_week = nfl_state.get("week", 1)
   playoff_start = league_data.get("settings", {}).get("playoff_week_start", 15)
   season = str(league_data.get("season", "2026"))
 
@@ -106,8 +106,30 @@ def fetch_league_data(lid):
   return pd.DataFrame(data), None
 
 
-if league_id:
-  df, error = fetch_league_data(league_id)
+df, error = fetch_league_data(league_id)
 
-  if error:
-    st
+if error:
+  st.error(error)
+elif df is not None and not df.empty:
+  st.header("📋 1st Round Rookie Draft Board (Reverse Max PF)")
+  st.caption("Lowest Max PF determines pick position.")
+
+  df_draft = df.sort_values(by="Max PF", ascending=True).reset_index(drop=True)
+  df_draft.index += 1
+  df_draft.index.name = "Pick Slot"
+
+  st.table(df_draft[["Original Team", "Current Pick Owner", "Max PF"]])
+
+  st.write("---")
+
+  col1, col2 = st.columns(2)
+
+  with col1:
+    st.subheader("📊 Ranked by Max PF")
+    df_max = df.sort_values(by="Max PF", ascending=False).reset_index(drop=True)
+    df_max.index += 1
+    st.table(df_max[["Original Team", "Max PF"]])
+
+  with col2:
+    st.subheader("📈 Ranked by Total PF")
+    df_total = df.sort_values(
