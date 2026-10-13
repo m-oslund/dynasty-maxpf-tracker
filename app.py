@@ -4,12 +4,12 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="Armchair Football League Draft Board",
+    page_title="AFL Standings and Draft Board",
     page_icon="🏈",
     layout="wide",
 )
 
-st.title("🏈 Armchair Football League Draft Board")
+st.title("🏈 AFL Standings and Draft Board")
 st.markdown("Live standings dynamically refreshed every 30 seconds from the Sleeper API.")
 
 league_id = st.sidebar.text_input("Sleeper League ID:", "1314874337139904512")
@@ -134,8 +134,8 @@ if league_id:
 
         st.markdown("---")
 
-        # 2. Draft Board (Tightened)
-        st.subheader("📋 1st Round Rookie Draft Board")
+        # 2. Rookie Draft Order (Tightened)
+        st.subheader("📋 Rookie Draft Order")
         st.caption("Lowest Max PF determines rookie pick position.")
 
         df_draft = (
