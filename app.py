@@ -117,7 +117,7 @@ if league_id:
     if error:
         st.error(error)
     elif df is not None and not df.empty:
-        # 1. League Standings
+        # 1. League Standings (Tightened)
         st.subheader("🏆 League Standings")
 
         df_standings = (
@@ -125,15 +125,16 @@ if league_id:
             .reset_index(drop=True)
             .copy()
         )
-        st.dataframe(
-            df_standings[["Team", "Record"]],
-            hide_index=True,
-            use_container_width=False,
-        )
+        df_standings.index += 1
+        df_standings.index.name = "Rank"
+
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            st.table(df_standings[["Team", "Record"]])
 
         st.markdown("---")
 
-        # 2. Rookie Draft Order
+        # 2. Rookie Draft Order (Tightened)
         st.subheader("📋 Rookie Draft Order")
         st.caption("Lowest Max PF determines rookie pick position.")
 
@@ -142,17 +143,17 @@ if league_id:
             .reset_index(drop=True)
             .copy()
         )
-        df_draft.insert(0, "Pick", [f"1.{i:02d}" for i in range(1, len(df_draft) + 1)])
+        df_draft.index += 1
+        df_draft.index = [f"1.{i:02d}" for i in df_draft.index]
+        df_draft.index.name = "Pick"
 
-        st.dataframe(
-            df_draft[["Pick", "Team", "Max PF", "Record"]],
-            hide_index=True,
-            use_container_width=False,
-        )
+        d1, d2, d3 = st.columns([1, 2, 1])
+        with d2:
+            st.table(df_draft[["Team", "Max PF", "Record"]])
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 3. Total PF
+        # 3. Total PF (Tightened)
         st.subheader("📈 Total PF (Reverse Order)")
         st.caption("Lowest Total PF to highest Total PF.")
 
@@ -161,12 +162,12 @@ if league_id:
             .reset_index(drop=True)
             .copy()
         )
-        df_total.insert(0, "Pick", [f"1.{i:02d}" for i in range(1, len(df_total) + 1)])
+        df_total.index += 1
+        df_total.index = [f"1.{i:02d}" for i in df_total.index]
+        df_total.index.name = "Pick"
 
-        st.dataframe(
-            df_total[["Pick", "Team", "Total PF", "Record"]],
-            hide_index=True,
-            use_container_width=False,
-        )
+        t1, t2, t3 = st.columns([1, 2, 1])
+        with t2:
+            st.table(df_total[["Team", "Total PF", "Record"]])
     else:
         st.warning("No data found for this league ID.")
