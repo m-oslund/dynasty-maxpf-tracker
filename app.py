@@ -67,7 +67,9 @@ def fetch_league_data(lid):
 
     for team in res.json():
       rid = team.get("roster_id")
-      pts = team.get("players_points", {})
+      pts = team.get(
+          "players_points", {}
+      )  # Note: Sleeper players_points can be floats
       if rid and pts:
         total_bench_pf[rid] += sum(pts.values())
         sorted_scores = sorted(pts.values(), reverse=True)
@@ -78,8 +80,8 @@ def fetch_league_data(lid):
     data.append({
         "roster_id": rid,
         "Team": owner,
-        "Max PF": round(max_pf[rid], 2),
-        "Total PF (Inc. Bench)": round(total_bench_pf[rid], 2),
+        "Max PF": f"{max_pf[rid]:.2f}",
+        "Total PF (Inc. Bench)": f"{total_bench_pf[rid]:.2f}",
     })
 
   return pd.DataFrame(data), None
@@ -106,4 +108,27 @@ if league_id:
 
     st.markdown("---")
 
-    # 2. Side-by-Side Stand
+    # 2. Side-by-Side Standings Breakdown
+    col1, col2 = st.columns(2)
+
+    with col1:
+      st.subheader("📊 Ranked by Max PF")
+      df_max = (
+          df.sort_values(by="Max PF", ascending=False)
+          .reset_index(drop=True)
+          .copy()
+      )
+      df_max.index += 1
+      st.table(df_max[["Team", "Max PF"]])
+
+    with col2:
+      st.subheader("📈 Ranked by Total PF (Inc. Bench)")
+      df_total = (
+          df.sort_values(by="Total PF (Inc. Bench)", ascending=False)
+          .reset_index(drop=True)
+          .copy()
+      )
+      df_total.index += 1
+      st.table(df_total[["Team", "Total PF (Inc. Bench)"]])
+  else:
+    st.warning("No data found for this league ID.")
